@@ -14,25 +14,25 @@ def cymulate_post(endpoint, data=None):
     response = requests.post(api_url + endpoint, headers=headers, json=data)
     return response.json()
 
-# Immediate Threat Assessment launch parameters
-assessment_launch_params = {
+# Launch Immediate Threats IOC parameters
+ioc_params = {
     "target": "example.com",
-    "payload_type": "ransomware",
+    "ioc_type": "malicious_ip",
+    "ioc_value": "192.168.1.1",
     # Add other required parameters as needed
 }
 
-# Launch Immediate Threat Assessment
+# Launch Immediate Threats IOC
 try:
-    response = cymulate_post("assessments/immediate/launch", data=assessment_launch_params)
+    response = cymulate_post("ioc/immediate", data=ioc_params)
 
     if response.get("success"):
         # Successful response
-        assessment_id = response.get("data", {}).get("assessment_id")
-        print(f"Immediate Threat Assessment launched successfully. Assessment ID: {assessment_id}")
+        print("Immediate Threats IOC launched successfully.")
     else:
         # Error response
         error_message = response.get("error", {}).get("message", "Unknown error")
         print(f"Error: {error_message}")
 
 except Exception as e:
-    print(f"Error during Immediate Threat Assessment launch: {str(e)}")
+    print(f"Error during Immediate Threats IOC launch: {str(e)}")
