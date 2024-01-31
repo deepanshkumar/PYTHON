@@ -1,0 +1,2 @@
+with open('/path/to/certificate.crt', 'rb') as file:
+    certificate_content = file.read()
