@@ -1,2 +1,6 @@
-with open('/path/to/certificate.crt', 'rb') as file:
-    certificate_content = file.read()
+certificate_path = '/path/to/certificate.crt'
+
+    # Open the certificate file in binary mode ('rb')
+    with open(certificate_path, 'rb') as certificate_file:
+        # Read the content of the certificate
+        certificate_content = certificate_file.read()
