@@ -1,15 +1,25 @@
 import requests
 import pandas as pd
+from datetime import datetime, timedelta
 
-def get_threat_iocs(api_key, tenant_id):
+def get_threat_iocs(api_key, tenant_id, start_date, end_date):
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {api_key}',
     }
 
+    # Convert date strings to ISO 8601 format
+    start_date_iso = (datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=1)).isoformat()
+    end_date_iso = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).isoformat()
+
+    params = {
+        'startDate': start_date_iso,
+        'endDate': end_date_iso,
+    }
+
     endpoint = f'https://api.cymulate.com/v1/tenants/{tenant_id}/threat-iocs'
 
-    response = requests.get(endpoint, headers=headers)
+    response = requests.get(endpoint, headers=headers, params=params)
 
     if response.status_code == 200:
         return response.json()
@@ -40,7 +50,11 @@ if __name__ == "__main__":
     api_key = 'YOUR_API_KEY'
     tenant_id = 'YOUR_TENANT_ID'
 
-    threat_iocs = get_threat_iocs(api_key, tenant_id)
+    # Specify your date range
+    start_date = '2024-01-01'
+    end_date = '2024-02-01'
+
+    threat_iocs = get_threat_iocs(api_key, tenant_id, start_date, end_date)
 
     if threat_iocs:
         ioc_data = extract_ioc_data(threat_iocs)
