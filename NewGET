@@ -1,0 +1,47 @@
+import requests
+import pandas as pd
+
+def get_threat_iocs(api_key, tenant_id):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+    }
+
+    endpoint = f'https://api.cymulate.com/v1/tenants/{tenant_id}/threat-iocs'
+
+    response = requests.get(endpoint, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Failed to fetch threat IOCs. Status code: {response.status_code}")
+        return None
+
+def extract_ioc_data(threat_iocs):
+    ioc_data = []
+    if threat_iocs and 'data' in threat_iocs:
+        for ioc in threat_iocs['data']:
+            ioc_id = ioc.get('id', '')
+            ioc_name = ioc.get('name', '')
+            ioc_status = ioc.get('status', '')
+            ioc_data.append({'ID': ioc_id, 'Name': ioc_name, 'Status': ioc_status})
+    return ioc_data
+
+def save_iocs_to_excel(ioc_data, excel_filename='threat_iocs.xlsx'):
+    if ioc_data:
+        df = pd.DataFrame(ioc_data)
+        df.to_excel(excel_filename, index=False)
+        print(f"Threat IOCs saved to {excel_filename}")
+    else:
+        print("No threat IOCs to save.")
+
+if __name__ == "__main__":
+    # Replace with your actual Cymulate API key and tenant ID
+    api_key = 'YOUR_API_KEY'
+    tenant_id = 'YOUR_TENANT_ID'
+
+    threat_iocs = get_threat_iocs(api_key, tenant_id)
+
+    if threat_iocs:
+        ioc_data = extract_ioc_data(threat_iocs)
+        save_iocs_to_excel(ioc_data)
