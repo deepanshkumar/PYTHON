@@ -1,0 +1,70 @@
+import requests
+import pandas as pd
+
+def get_threat_iocs(api_key, tenant_id):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+    }
+
+    endpoint = f'https://api.cymulate.com/v1/tenants/{tenant_id}/threat-iocs'
+
+    response = requests.get(endpoint, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Failed to fetch threat IOCs. Status code: {response.status_code}")
+        return None
+
+def run_assessment(api_key, tenant_id, ioc_ids, parameters):
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+    }
+
+    endpoint = f'https://api.cymulate.com/v1/tenants/{tenant_id}/assessments'
+
+    # Example payload for running an assessment with specific IOC IDs and parameters
+    payload = {
+        'iocs': ioc_ids,
+        'parameters': parameters,
+    }
+
+    response = requests.post(endpoint, headers=headers, json=payload)
+
+    if response.status_code == 201:
+        print("Assessment started successfully.")
+    else:
+        print(f"Failed to start assessment. Status code: {response.status_code}")
+
+if __name__ == "__main__":
+    # Replace with your actual Cymulate API key and tenant ID
+    api_key = 'YOUR_API_KEY'
+    tenant_id = 'YOUR_TENANT_ID'
+
+    # Specify the Excel file containing IOC IDs
+    excel_file = 'ioc_ids.xlsx'
+
+    try:
+        # Read the Excel file
+        df = pd.read_excel(excel_file)
+
+        # Extract IOC IDs from the Excel file
+        ioc_ids = df['ID'].tolist()
+
+        # Specify assessment parameters
+        assessment_parameters = {
+            'param1': 'value1',
+            'param2': 'value2',
+            # Add more parameters as needed
+        }
+
+        if ioc_ids:
+            # Run assessment with the extracted IOC IDs and parameters
+            run_assessment(api_key, tenant_id, ioc_ids, assessment_parameters)
+        else:
+            print("No IOC IDs found in the Excel file.")
+
+    except Exception as e:
+        print(f"Error: {e}")
