@@ -34,7 +34,11 @@ def extract_ioc_data(threat_iocs):
             ioc_id = ioc.get('id', '')
             ioc_name = ioc.get('name', '')
             ioc_status = ioc.get('status', '')
-            ioc_data.append({'ID': ioc_id, 'Name': ioc_name, 'Status': ioc_status})
+
+            # Exclude IOCs with status 'tested'
+            if ioc_status.lower() != 'tested':
+                ioc_data.append({'ID': ioc_id, 'Name': ioc_name, 'Status': ioc_status})
+                
     return ioc_data
 
 def save_iocs_to_excel(ioc_data, excel_filename='threat_iocs.xlsx'):
