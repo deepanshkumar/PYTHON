@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-def fetch_iocs_to_excel(api_key, start_date, end_date, output_file):
+def fetch_iocs_details_to_excel(api_key, start_date, end_date, output_file):
     url = "https://api.cymulate.com/v1/assessment/immediate"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -22,8 +22,12 @@ def fetch_iocs_to_excel(api_key, start_date, end_date, output_file):
             timestamp = assessment.get('timestamp')
             device = assessment.get('device')
             for ioc in assessment.get('iocs', []):
+                ioc_details = ioc.get('details', {})
                 iocs_list.append({
-                    "IOC": ioc,
+                    "IOC Name": ioc_details.get('name'),
+                    "MD5": ioc_details.get('md5'),
+                    "SHA1": ioc_details.get('sha1'),
+                    "SHA256": ioc_details.get('sha256'),
                     "Timestamp": timestamp,
                     "Assessment Name": assessment_name,
                     "Device": device
@@ -39,6 +43,6 @@ def fetch_iocs_to_excel(api_key, start_date, end_date, output_file):
 api_key = "your_api_key_here"
 start_date = "2023-01-01"
 end_date = "2023-12-31"
-output_file = "iocs_data.xlsx"
+output_file = "iocs_details.xlsx"
 
-fetch_iocs_to_excel(api_key, start_date, end_date, output_file)
+fetch_iocs_details_to_excel(api_key, start_date, end_date, output_file)
