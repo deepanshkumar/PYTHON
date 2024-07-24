@@ -1,48 +1,53 @@
 import requests
-import pandas as pd
+import csv
+from datetime import datetime
 
-def fetch_iocs_details_to_excel(api_key, start_date, end_date, output_file):
-    url = "https://api.cymulate.com/v1/assessment/immediate"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    params = {
-        "start_date": start_date,
-        "end_date": end_date
-    }
-    response = requests.get(url, headers=headers, params=params)
-
+# Function to fetch the Cymulate API response
+def fetch_cymulate_data(api_url, headers):
+    response = requests.get(api_url, headers=headers)
     if response.status_code == 200:
-        data = response.json()
-        iocs_list = []
-
-        for assessment in data.get('assessments', []):
-            assessment_name = assessment.get('name')
-            timestamp = assessment.get('timestamp')
-            device = assessment.get('device')
-            for ioc in assessment.get('iocs', []):
-                ioc_details = ioc.get('details', {})
-                iocs_list.append({
-                    "IOC Name": ioc_details.get('name'),
-                    "MD5": ioc_details.get('md5'),
-                    "SHA1": ioc_details.get('sha1'),
-                    "SHA256": ioc_details.get('sha256'),
-                    "Timestamp": timestamp,
-                    "Assessment Name": assessment_name,
-                    "Device": device
-                })
-
-        df = pd.DataFrame(iocs_list)
-        df.to_excel(output_file, index=False)
-        print(f"Data successfully written to {output_file}")
+        return response.json()
     else:
-        response.raise_for_status()
+        print("Failed to fetch data")
+        return None
 
-# Example usage:
-api_key = "your_api_key_here"
-start_date = "2023-01-01"
-end_date = "2023-12-31"
-output_file = "iocs_details.xlsx"
+# Function to process the data and write to a CSV file
+def process_and_write_to_csv(data, csv_filename):
+    assessments = data['data']
+    rows = []
 
-fetch_iocs_details_to_excel(api_key, start_date, end_date, output_file)
+    for assessment in assessments:
+        assessment_name = assessment['immediate_threat_name']
+        timestamp = assessment['date_published']
+        for ioc in assessment['iocs']:
+            row = {
+                "Assessment Name": assessment_name,
+                "Timestamp": timestamp,
+                "IOC Name": ioc['name'],
+                "MD5": ioc.get('md5', 'N/A'),
+                "SHA1": ioc.get('sha1', 'N/A'),
+                "SHA256": ioc.get('sha256', 'N/A')
+            }
+            rows.append(row)
+
+    with open(csv_filename, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=["Assessment Name", "Timestamp", "IOC Name", "MD5", "SHA1", "SHA256"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+# Main function to execute the script
+def main():
+    api_url = "YOUR_CYMULATE_API_URL"
+    headers = {
+        "Authorization": "Bearer YOUR_API_KEY"
+    }
+    csv_filename = "cymulate_assessments.csv"
+
+    # Fetch and process data
+    data = fetch_cymulate_data(api_url, headers)
+    if data:
+        process_and_write_to_csv(data, csv_filename)
+        print(f"Data successfully written to {csv_filename}")
+
+if __name__ == "__main__":
+    main()
