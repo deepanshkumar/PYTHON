@@ -1,19 +1,25 @@
 import requests
 import pandas as pd
+from datetime import datetime
 
 # Define your Cymulate API token and endpoints
 API_TOKEN = 'your_cymulate_api_token'
 HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/history'
 TECH_HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/technical_history'
 
-# Function to fetch assessment IDs from history API
-def fetch_assessment_ids():
+# Function to fetch assessment IDs from history API within a date range
+def fetch_assessment_ids(start_date, end_date):
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
 
-    response = requests.get(HISTORY_API_URL, headers=headers)
+    params = {
+        'start_date': start_date,
+        'end_date': end_date
+    }
+
+    response = requests.get(HISTORY_API_URL, headers=headers, params=params)
     data = response.json()
 
     assessment_ids = [assessment['id'] for assessment in data['assessments']]
@@ -54,9 +60,9 @@ def fetch_assessment_results(assessment_id):
     return results
 
 # Main function
-def main():
-    # Fetch assessment IDs
-    assessment_ids = fetch_assessment_ids()
+def main(start_date, end_date):
+    # Fetch assessment IDs within the date range
+    assessment_ids = fetch_assessment_ids(start_date, end_date)
 
     all_results = []
 
@@ -72,4 +78,8 @@ def main():
     print('Results have been saved to cymulate_assessment_results.xlsx')
 
 if __name__ == '__main__':
-    main()
+    # Define the start and end dates
+    start_date = '2023-01-01'  # Replace with your start date
+    end_date = '2023-12-31'    # Replace with your end date
+
+    main(start_date, end_date)
