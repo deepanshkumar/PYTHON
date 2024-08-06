@@ -1,11 +1,10 @@
 import requests
 import pandas as pd
-from datetime import datetime
 
 # Define your Cymulate API token and endpoints
 API_TOKEN = 'your_cymulate_api_token'
-HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/history'
-TECH_HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/technical_history'
+HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/history'  # Update with the correct API endpoint
+DETAILS_API_URL = 'https://api.cymulate.com/v1/assessments/details'  # Update with the correct API endpoint
 
 # Function to fetch assessment IDs from history API within a date range
 def fetch_assessment_ids(start_date, end_date):
@@ -20,42 +19,51 @@ def fetch_assessment_ids(start_date, end_date):
     }
 
     response = requests.get(HISTORY_API_URL, headers=headers, params=params)
-    data = response.json()
+    if response.status_code != 200:
+        print(f'Error fetching data: {response.status_code}')
+        return []
 
-    assessment_ids = [assessment['id'] for assessment in data['assessments']]
+    data = response.json()
+    if 'data' not in data or 'attack' not in data['data']:
+        print('No assessment data found in the response.')
+        return []
+
+    assessments = data['data']['attack']
+    assessment_ids = [assessment['ID'] for assessment in assessments]
     return assessment_ids
 
-# Function to fetch results for a specific assessment ID using technical history API
-def fetch_assessment_results(assessment_id):
+# Function to fetch results for a specific assessment ID using another API
+def fetch_assessment_details(assessment_id):
     headers = {
         'Authorization': f'Bearer {API_TOKEN}',
         'Content-Type': 'application/json'
     }
 
-    response = requests.get(f'{TECH_HISTORY_API_URL}/{assessment_id}', headers=headers)
-    data = response.json()
+    response = requests.get(f'{DETAILS_API_URL}/{assessment_id}', headers=headers)
+    if response.status_code != 200:
+        print(f'Error fetching results for assessment ID {assessment_id}: {response.status_code}')
+        return []
 
+    data = response.json()
+    if 'data' not in data or 'payloads' not in data['data']:
+        print(f'No detailed data found for assessment ID {assessment_id}.')
+        return []
+
+    payloads = data['data']['payloads']
     results = []
 
-    for result in data['results']:
-        attack_payload = result.get('payload')
-        name = result.get('name')
-        timestamp = result.get('timestamp')
-        sha256 = result.get('sha256')
-        sha1 = result.get('sha1')
-        attack_vector = result.get('attack_vector')
-        endpoint_address = result.get('endpoint_address')
-
-        results.append({
+    for payload in payloads:
+        result = {
             'Assessment ID': assessment_id,
-            'Attack Payload': attack_payload,
-            'Name': name,
-            'Timestamp': timestamp,
-            'SHA-256': sha256,
-            'SHA-1': sha1,
-            'Attack Vector': attack_vector,
-            'Endpoint Address': endpoint_address
-        })
+            'Name': payload.get('Name'),
+            'Attack Payload': payload.get('Attack_Payload'),
+            'Timestamp': payload.get('Timestamp'),
+            'SHA-1': payload.get('Sha1'),
+            'SHA-256': payload.get('Sha256'),
+            'Attack Vector': payload.get('Attack_Vector'),
+            'Endpoint Address': payload.get('Target')
+        }
+        results.append(result)
 
     return results
 
@@ -66,16 +74,16 @@ def main(start_date, end_date):
 
     all_results = []
 
-    # Fetch results for each assessment ID
+    # Fetch details for each assessment ID
     for assessment_id in assessment_ids:
-        results = fetch_assessment_results(assessment_id)
+        results = fetch_assessment_details(assessment_id)
         all_results.extend(results)
 
-    # Convert results to DataFrame and save to Excel
+    # Convert results to DataFrame and save to CSV
     df = pd.DataFrame(all_results)
-    df.to_excel('cymulate_assessment_results.xlsx', index=False)
+    df.to_csv('cymulate_assessment_details.csv', index=False)
 
-    print('Results have been saved to cymulate_assessment_results.xlsx')
+    print('Results have been saved to cymulate_assessment_details.csv')
 
 if __name__ == '__main__':
     # Define the start and end dates
