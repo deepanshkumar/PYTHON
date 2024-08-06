@@ -1,11 +1,24 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 # Define your Cymulate API token and endpoints
 API_TOKEN = 'your_cymulate_api_token'
 HISTORY_API_URL = 'https://api.cymulate.com/v1/assessments/history'  # Update with the correct API endpoint
 DETAILS_API_URL = 'https://api.cymulate.com/v1/assessments/details'  # Update with the correct API endpoint
+
+# Email configuration
+EMAIL_HOST = 'smtp.your-email-provider.com'
+EMAIL_PORT = 587  # or 465 for SSL
+EMAIL_USER = 'your-email@example.com'
+EMAIL_PASS = 'your-email-password'
+EMAIL_TO = 'recipient@example.com'
+EMAIL_SUBJECT = 'Cymulate Assessment Details'
 
 # Function to fetch assessment IDs from history API within a date range
 def fetch_assessment_ids(start_date, end_date):
@@ -30,8 +43,9 @@ def fetch_assessment_ids(start_date, end_date):
         return []
 
     assessments = data['data']['attack']
-    assessment_ids = [assessment['ID'] for assessment in assessments]
-    return assessment_ids
+    # Filter assessments to include only those with environment set to "PROD"
+    prod_assessments = [assessment['ID'] for assessment in assessments if assessment.get('Environment') == 'PROD']
+    return prod_assessments
 
 # Function to fetch results for a specific assessment ID using another API
 def fetch_assessment_details(assessment_id):
@@ -51,22 +65,49 @@ def fetch_assessment_details(assessment_id):
         return []
 
     payloads = data['data']['payloads']
+    title = data['data'].get('title')
     results = []
 
     for payload in payloads:
         result = {
             'Assessment ID': assessment_id,
-            'Name': payload.get('Name'),
+            'Title': title,
             'Attack Payload': payload.get('Attack_Payload'),
             'Timestamp': payload.get('Timestamp'),
             'SHA-1': payload.get('Sha1'),
             'SHA-256': payload.get('Sha256'),
             'Attack Vector': payload.get('Attack_Vector'),
-            'Endpoint Address': payload.get('Target')
+            'Endpoint Address': payload.get('endpointAddress')
         }
         results.append(result)
 
     return results
+
+# Function to send email with the CSV attachment
+def send_email(csv_file):
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_USER
+    msg['To'] = EMAIL_TO
+    msg['Subject'] = EMAIL_SUBJECT
+
+    body = 'Please find the attached CSV file with Cymulate assessment details.'
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Attach CSV file
+    with open(csv_file, 'rb') as attachment:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename={csv_file}')
+        msg.attach(part)
+
+    # Send email
+    with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
+        server.starttls()  # Secure the connection
+        server.login(EMAIL_USER, EMAIL_PASS)
+        server.send_message(msg)
+
+    print(f'Email sent with attachment {csv_file}')
 
 # Main function
 def main(lookback_days):
@@ -78,7 +119,7 @@ def main(lookback_days):
     start_date_str = start_date.strftime('%Y-%m-%d')
     end_date_str = end_date.strftime('%Y-%m-%d')
 
-    # Fetch assessment IDs within the date range
+    # Fetch assessment IDs within the date range and filter for PROD environment
     assessment_ids = fetch_assessment_ids(start_date_str, end_date_str)
 
     all_results = []
@@ -92,11 +133,14 @@ def main(lookback_days):
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Convert results to DataFrame and save to CSV with timestamp in the file name
+    csv_file = f'cymulate_assessment_details_{current_time}.csv'
     df = pd.DataFrame(all_results)
-    file_name = f'cymulate_assessment_details_{current_time}.csv'
-    df.to_csv(file_name, index=False)
+    df.to_csv(csv_file, index=False)
 
-    print(f'Results have been saved to {file_name}')
+    print(f'Results have been saved to {csv_file}')
+
+    # Send the CSV file via email
+    send_email(csv_file)
 
 if __name__ == '__main__':
     # Input the lookback period in days
