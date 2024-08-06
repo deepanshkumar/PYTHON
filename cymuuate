@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+from datetime import datetime, timedelta
 
 # Define your Cymulate API token and endpoints
 API_TOKEN = 'your_cymulate_api_token'
@@ -68,9 +69,17 @@ def fetch_assessment_details(assessment_id):
     return results
 
 # Main function
-def main(start_date, end_date):
+def main(lookback_days):
+    # Calculate the start and end dates based on the lookback period
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=lookback_days)
+    
+    # Format dates as strings
+    start_date_str = start_date.strftime('%Y-%m-%d')
+    end_date_str = end_date.strftime('%Y-%m-%d')
+
     # Fetch assessment IDs within the date range
-    assessment_ids = fetch_assessment_ids(start_date, end_date)
+    assessment_ids = fetch_assessment_ids(start_date_str, end_date_str)
 
     all_results = []
 
@@ -79,15 +88,18 @@ def main(start_date, end_date):
         results = fetch_assessment_details(assessment_id)
         all_results.extend(results)
 
-    # Convert results to DataFrame and save to CSV
-    df = pd.DataFrame(all_results)
-    df.to_csv('cymulate_assessment_details.csv', index=False)
+    # Get the current timestamp
+    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    print('Results have been saved to cymulate_assessment_details.csv')
+    # Convert results to DataFrame and save to CSV with timestamp in the file name
+    df = pd.DataFrame(all_results)
+    file_name = f'cymulate_assessment_details_{current_time}.csv'
+    df.to_csv(file_name, index=False)
+
+    print(f'Results have been saved to {file_name}')
 
 if __name__ == '__main__':
-    # Define the start and end dates
-    start_date = '2023-01-01'  # Replace with your start date
-    end_date = '2023-12-31'    # Replace with your end date
-
-    main(start_date, end_date)
+    # Input the lookback period in days
+    lookback_days = int(input("Enter the number of days to look back: "))
+    
+    main(lookback_days)
